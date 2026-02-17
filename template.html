@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YAAT - Yet Another Agent Tracer</title>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8f9fa;
+            color: #1a1a1a;
+        }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        
+        /* Header */
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #232f3e;
+            margin-bottom: 5px;
+        }
+        .header p { color: #666; font-size: 14px; }
+        
+        /* Credentials Form */
+        .creds-form {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #ffc107;
+        }
+        .creds-form input {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-right: 10px;
+            font-size: 14px;
+        }
+        .creds-form button {
+            padding: 8px 16px;
+            background: #232f3e;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .creds-form button:hover { background: #131921; }
+        
+        /* Filters */
+        .filters {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .filter-row {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .filter-group label {
+            font-size: 12px;
+            font-weight: 500;
+            color: #666;
+            text-transform: uppercase;
+        }
+        .filter-group select,
+        .filter-group input {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            min-width: 200px;
+        }
+        .btn {
+            padding: 8px 16px;
+            background: #ff9900;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            margin-top: 18px;
+        }
+        .btn:hover { background: #ec7211; }
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        /* Sessions List */
+        .sessions {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .session-item {
+            padding: 15px 20px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .session-item:hover { background: #f8f9fa; }
+        .session-item.active { background: #e3f2fd; border-left: 3px solid #2196f3; }
+        .session-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .session-id {
+            font-weight: 600;
+            color: #232f3e;
+            font-size: 14px;
+        }
+        .session-time {
+            font-size: 12px;
+            color: #666;
+        }
+        .session-meta {
+            display: flex;
+            gap: 15px;
+            font-size: 12px;
+            color: #666;
+        }
+        .session-meta span {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        /* Trace Details */
+        .trace-details {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-top: 20px;
+            display: grid;
+            grid-template-columns: 400px 1fr;
+            min-height: 600px;
+        }
+        
+        /* Left Panel - Span Tree */
+        .trace-left {
+            border-right: 1px solid #eee;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        /* Right Panel - Span Details */
+        .trace-right {
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .trace-header {
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        .trace-header h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #1a1a1a;
+        }
+        .trace-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            font-size: 12px;
+        }
+        .trace-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+        .trace-meta-item label {
+            font-weight: 500;
+            color: #666;
+        }
+        .trace-meta-item span {
+            color: #1a1a1a;
+        }
+        
+        /* Span Tree */
+        .span-tree {
+            margin-top: 10px;
+        }
+        .span-tree-header {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: #666;
+            margin-bottom: 10px;
+            padding: 5px 0;
+        }
+        .span-item {
+            margin-bottom: 4px;
+        }
+        .span-bar {
+            display: flex;
+            align-items: center;
+            padding: 8px 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+        .span-bar:hover {
+            background: #e9ecef;
+        }
+        .span-bar.active {
+            background: #e3f2fd;
+            border-left-color: #2196f3;
+        }
+        .span-indent {
+            display: inline-block;
+        }
+        .span-icon {
+            width: 16px;
+            height: 16px;
+            margin-right: 8px;
+            opacity: 0.6;
+        }
+        .span-name {
+            flex: 1;
+            font-size: 13px;
+            font-weight: 500;
+            color: #1a1a1a;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .span-duration {
+            font-size: 11px;
+            color: #666;
+            margin-left: 10px;
+            font-family: 'Monaco', 'Courier New', monospace;
+        }
+        
+        /* Span Details Panel */
+        .span-details-panel {
+            display: none;
+        }
+        .span-details-panel.active {
+            display: block;
+        }
+        .span-details-header {
+            margin-bottom: 20px;
+        }
+        .span-details-header h4 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #1a1a1a;
+        }
+        .span-details-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .span-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        .span-badge strong {
+            color: #666;
+            font-weight: 500;
+        }
+        
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 5px;
+            border-bottom: 1px solid #eee;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px 16px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: #666;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+        .tab:hover {
+            color: #1a1a1a;
+        }
+        .tab.active {
+            color: #2196f3;
+            border-bottom-color: #2196f3;
+        }
+        
+        /* Content Sections */
+        .content-section {
+            display: none;
+        }
+        .content-section.active {
+            display: block;
+        }
+        .content-section h5 {
+            font-size: 13px;
+            font-weight: 600;
+            color: #666;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+        .content-section pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+            line-height: 1.6;
+            border: 1px solid #e9ecef;
+        }
+        .content-section .code-block {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+            line-height: 1.6;
+            font-family: 'Monaco', 'Courier New', monospace;
+        }
+        
+        /* Empty State */
+        .empty-details {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #999;
+            text-align: center;
+        }
+        .empty-details-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+            opacity: 0.3;
+        }
+        .empty-details p {
+            font-size: 14px;
+        }
+        
+        /* Loading & Empty States */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        .empty {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        
+        /* Status badges */
+        .status {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+        .status.ok { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        .status.pending { background: #fff3cd; color: #856404; }
+    </style>
+</head>
+<body>
+    <div class="container" x-data="agentView()">
+        <!-- Header -->
+        <div class="header">
+            <h1>🔍 YAAT</h1>
+            <p>Yet Another Agent Tracer - for Bedrock Agent Core Observability</p>
+        </div>
+        
+        <!-- Credentials Form (if needed) -->
+        <div class="creds-form" x-show="!awsConfigured">
+            <strong>⚠️ AWS Credentials Required</strong>
+            <div style="margin-top: 10px;">
+                <input type="text" placeholder="AWS Access Key ID" x-model="awsAccessKey">
+                <input type="password" placeholder="AWS Secret Access Key" x-model="awsSecretKey">
+                <input type="password" placeholder="AWS Session Token (optional)" x-model="awsSessionToken">
+                <input type="text" placeholder="Region (e.g., us-east-1)" x-model="awsRegion">
+                <button @click="saveCredentials()">Save Credentials</button>
+            </div>
+        </div>
+        
+        <!-- Error Display -->
+        <div class="error" x-show="error" x-text="error"></div>
+        
+        <!-- Filters -->
+        <div class="filters">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label>Agent</label>
+                    <select x-model="selectedAgent" @change="loadSessions()">
+                        <option value="">Select an agent...</option>
+                        <template x-for="agent in agents" :key="agent">
+                            <option :value="agent" x-text="agent"></option>
+                        </template>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label>Time Range</label>
+                    <select x-model="timeRange" @change="loadSessions()">
+                        <option value="1">Last 1 hour</option>
+                        <option value="6">Last 6 hours</option>
+                        <option value="24">Last 24 hours</option>
+                        <option value="168">Last 7 days</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label>Session ID</label>
+                    <input type="text" placeholder="Filter by session ID..." x-model="sessionFilter">
+                </div>
+                
+                <button class="btn" @click="loadAgents()" :disabled="loading">
+                    <span x-show="!loading">🔄 Refresh</span>
+                    <span x-show="loading">Loading...</span>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Sessions List -->
+        <div class="sessions">
+            <div class="loading" x-show="loading && sessions.length === 0">
+                Loading sessions...
+            </div>
+            
+            <div class="empty" x-show="!loading && sessions.length === 0">
+                No sessions found. Select an agent and time range to view traces.
+            </div>
+            
+            <template x-for="session in filteredSessions" :key="session.sessionId">
+                <div class="session-item" 
+                     :class="{ active: selectedSession?.sessionId === session.sessionId }"
+                     @click="selectSession(session)">
+                    <div class="session-header">
+                        <span class="session-id" x-text="session.sessionId"></span>
+                        <span class="session-time" x-text="formatTime(session.timestamp)"></span>
+                    </div>
+                    <div class="session-meta">
+                        <span>🔄 <span x-text="session.traceCount"></span> traces</span>
+                        <span x-show="session.status">
+                            <span class="status" :class="session.status" x-text="session.status"></span>
+                        </span>
+                    </div>
+                </div>
+            </template>
+        </div>
+        
+        <!-- Trace Details -->
+        <div class="trace-details" x-show="selectedSession">
+            <!-- Left Panel - Span Tree -->
+            <div class="trace-left">
+                <div class="trace-header">
+                    <h3>Session Timeline</h3>
+                    <div class="trace-meta">
+                        <div class="trace-meta-item">
+                            <label>Session:</label>
+                            <span x-text="selectedSession?.sessionId?.substring(0, 8) + '...'"></span>
+                        </div>
+                        <div class="trace-meta-item">
+                            <label>Traces:</label>
+                            <span x-text="selectedSession?.traceCount || 0"></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="span-tree">
+                    <!-- Iterate through traces -->
+                    <template x-for="(trace, traceIdx) in (selectedSession?.traces || [])" :key="trace.traceId">
+                        <div style="margin-bottom: 15px;" x-data="{ expanded: true }">
+                            <div class="span-tree-header" 
+                                 style="background: #f0f0f0; padding: 8px; border-radius: 4px; margin-bottom: 8px; cursor: pointer; display: flex; align-items: center; justify-content: space-between;"
+                                 @click="expanded = !expanded">
+                                <div>
+                                    <span x-text="expanded ? '🔽' : '▶️'" style="margin-right: 5px;"></span>
+                                    <strong>Trace <span x-text="traceIdx + 1"></span></strong>
+                                    <span style="margin-left: 10px; color: #666; font-weight: normal;" x-text="'(' + (trace?.duration || 0) + 'ms)'"></span>
+                                </div>
+                                <span style="color: #999; font-size: 11px;" x-text="(trace?.spans?.length || 0) + ' spans'"></span>
+                            </div>
+                            
+                            <!-- Iterate through spans in trace -->
+                            <div x-show="expanded">
+                                <template x-for="(span, spanIdx) in (trace?.spans || [])" :key="span.timestamp + '-' + spanIdx">
+                                    <div class="span-item">
+                                        <div class="span-bar" 
+                                             :class="{ active: selectedSpan?.timestamp === span.timestamp && selectedSpan?.spanId === span.spanId }"
+                                             @click="selectSpan(span)">
+                                            <span class="span-icon" x-text="span.icon || '📊'"></span>
+                                            <span class="span-name" x-text="span.name"></span>
+                                            <span class="span-duration" x-text="span.duration ? span.duration + 'ms' : ''"></span>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+            
+            <!-- Right Panel - Span Details -->
+            <div class="trace-right">
+                <!-- Empty State -->
+                <div class="empty-details" x-show="!selectedSpan">
+                    <div class="empty-details-icon">📊</div>
+                    <p>Select a span from the timeline to view details</p>
+                </div>
+                
+                <!-- Span Details -->
+                <div class="span-details-panel" :class="{ active: selectedSpan }" x-show="selectedSpan">
+                    <div class="span-details-header">
+                        <h4 x-text="selectedSpan?.name"></h4>
+                        <div class="span-details-meta">
+                            <div class="span-badge">
+                                <strong>Span ID:</strong>
+                                <span x-text="selectedSpan?.spanId"></span>
+                            </div>
+                            <div class="span-badge" x-show="selectedSpan?.duration">
+                                <strong>Duration:</strong>
+                                <span x-text="selectedSpan?.duration + 'ms'"></span>
+                            </div>
+                            <div class="span-badge" x-show="selectedSpan?.parentSpanId">
+                                <strong>Parent:</strong>
+                                <span x-text="selectedSpan?.parentSpanId"></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Tabs -->
+                    <div class="tabs">
+                        <button class="tab" :class="{ active: activeTab === 'details' }" @click="activeTab = 'details'">
+                            Details
+                        </button>
+                        <button class="tab" :class="{ active: activeTab === 'metadata' }" @click="activeTab = 'metadata'">
+                            Metadata
+                        </button>
+                        <button class="tab" :class="{ active: activeTab === 'raw' }" @click="activeTab = 'raw'">
+                            Raw
+                        </button>
+                    </div>
+                    
+                    <!-- Tab Content -->
+                    <div class="content-section" :class="{ active: activeTab === 'details' }">
+                        <h5>Input Messages</h5>
+                        <div x-show="selectedSpan?.input_messages && selectedSpan.input_messages.length > 0" x-data="{ showAll: false }">
+                            <!-- Latest message (always visible) -->
+                            <template x-if="selectedSpan?.input_messages && selectedSpan.input_messages.length > 0">
+                                <div style="margin-bottom: 15px; padding: 10px; border-radius: 4px;"
+                                     :style="selectedSpan.input_messages[selectedSpan.input_messages.length - 1].role === 'system' ? 'background: #f8f9fa; border-left: 3px solid #6c757d;' : 
+                                             selectedSpan.input_messages[selectedSpan.input_messages.length - 1].role === 'user' ? 'background: #e3f2fd; border-left: 3px solid #2196f3;' :
+                                             selectedSpan.input_messages[selectedSpan.input_messages.length - 1].role === 'assistant' ? 'background: #e8f5e9; border-left: 3px solid #4caf50;' :
+                                             selectedSpan.input_messages[selectedSpan.input_messages.length - 1].role === 'tool_result' ? 'background: #fff3cd; border-left: 3px solid #ffc107;' : 
+                                             'background: #f8f9fa; border-left: 3px solid #007bff;'">
+                                    <div style="font-weight: 600; text-transform: uppercase; font-size: 11px; color: #666; margin-bottom: 5px;">
+                                        <span x-text="selectedSpan.input_messages[selectedSpan.input_messages.length - 1].role === 'tool_result' ? 
+                                                      '🔄 TOOL RESULT' + (selectedSpan.input_messages[selectedSpan.input_messages.length - 1].tool_name ? ': ' + selectedSpan.input_messages[selectedSpan.input_messages.length - 1].tool_name : '') : 
+                                                      selectedSpan.input_messages[selectedSpan.input_messages.length - 1].role === 'assistant' ? '🤖 ASSISTANT' :
+                                                      selectedSpan.input_messages[selectedSpan.input_messages.length - 1].role"></span>
+                                    </div>
+                                    <pre style="margin: 0; white-space: pre-wrap; font-size: 13px;" x-text="selectedSpan.input_messages[selectedSpan.input_messages.length - 1].content"></pre>
+                                </div>
+                            </template>
+                            <br>
+                            <!-- Show more button -->
+                            <button x-show="selectedSpan?.input_messages && selectedSpan.input_messages.length > 1 && !showAll" 
+                                    @click="showAll = true"
+                                    style="margin-bottom: 15px; padding: 6px 12px; background: #f8f9fa; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                                Show <span x-text="selectedSpan.input_messages.length - 1"></span> more messages
+                            </button>
+                            
+                            <!-- Older messages (collapsible) -->
+                            <div x-show="showAll">
+                                <template x-for="(msg, idx) in (selectedSpan?.input_messages || []).slice(0, -1).reverse()" :key="idx">
+                                    <div style="margin-bottom: 15px; padding: 10px; border-radius: 4px; opacity: 0.8;"
+                                         :style="msg.role === 'system' ? 'background: #f8f9fa; border-left: 3px solid #6c757d;' : 
+                                                 msg.role === 'user' ? 'background: #e3f2fd; border-left: 3px solid #2196f3;' :
+                                                 msg.role === 'assistant' ? 'background: #e8f5e9; border-left: 3px solid #4caf50;' :
+                                                 msg.role === 'tool_result' ? 'background: #fff3cd; border-left: 3px solid #ffc107;' : 
+                                                 'background: #f8f9fa; border-left: 3px solid #007bff;'">
+                                        <div style="font-weight: 600; text-transform: uppercase; font-size: 11px; color: #666; margin-bottom: 5px;">
+                                            <span x-text="msg.role === 'tool_result' ? '🔄 TOOL RESULT' + (msg.tool_name ? ': ' + msg.tool_name : '') : 
+                                                          msg.role === 'assistant' ? '🤖 ASSISTANT' :
+                                                          msg.role"></span>
+                                        </div>
+                                        <pre style="margin: 0; white-space: pre-wrap; font-size: 13px;" x-text="msg.content"></pre>
+                                    </div>
+                                </template>
+                                <br>
+                                <button @click="showAll = false"
+                                        style="margin-bottom: 15px; padding: 6px 12px; background: #f8f9fa; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                                    Show less
+                                </button>
+                            </div>
+                        </div>
+                        <div x-show="!selectedSpan?.input_messages || selectedSpan.input_messages.length === 0">
+                            <pre>No input messages</pre>
+                        </div>
+                        
+                        <h5 style="margin-top: 30px;">Output</h5>
+                        <div x-show="selectedSpan?.output">
+                            <!-- Tool Call Output -->
+                            <div x-show="selectedSpan?.output?.type === 'tool_call'" style="padding: 15px; background: #fff3cd; border-radius: 4px; border-left: 3px solid #ffc107;">
+                                <div style="font-weight: 600; margin-bottom: 10px;">
+                                    🔧 Tool Call: <code x-text="selectedSpan?.output?.tool_name"></code>
+                                </div>
+                                <div style="margin-bottom: 10px;">
+                                    <strong>Arguments:</strong>
+                                    <pre style="margin-top: 5px;" x-text="formatJSON(selectedSpan?.output?.arguments)"></pre>
+                                </div>
+                                <div x-show="selectedSpan?.output?.result">
+                                    <strong>Result:</strong>
+                                    <pre style="margin-top: 5px; background: #d4edda; padding: 10px; border-radius: 4px;" x-text="selectedSpan?.output?.result"></pre>
+                                </div>
+                            </div>
+                            
+                            <!-- Text Response Output -->
+                            <div x-show="selectedSpan?.output?.type === 'text'" style="padding: 15px; background: #e3f2fd; border-radius: 4px; border-left: 3px solid #2196f3;">
+                                <div style="font-weight: 600; margin-bottom: 10px;">🤖 Assistant Response</div>
+                                <pre style="margin: 0; white-space: pre-wrap;" x-text="selectedSpan?.output?.content"></pre>
+                            </div>
+                        </div>
+                        <div x-show="!selectedSpan?.output">
+                            <pre>No output data</pre>
+                        </div>
+                        
+                        <!-- Token Usage -->
+                        <div x-show="selectedSpan && selectedSpan.tokens && (selectedSpan.tokens.input || selectedSpan.tokens.output)" style="margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 4px;">
+                            <strong>Token Usage:</strong>
+                            <div style="margin-top: 5px;">
+                                <span x-show="selectedSpan && selectedSpan.tokens && selectedSpan.tokens.input">Input: <code x-text="selectedSpan?.tokens.input"></code></span>
+                                <span x-show="selectedSpan && selectedSpan.tokens && selectedSpan.tokens.output" style="margin-left: 15px;">Output: <code x-text="selectedSpan?.tokens.output"></code></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="content-section" :class="{ active: activeTab === 'metadata' }">
+                        <h5>Metadata</h5>
+                        <div style="margin-bottom: 15px;" x-show="selectedSpan?.type">
+                            <strong>Type:</strong> <code x-text="selectedSpan?.type"></code>
+                        </div>
+                        <div style="margin-bottom: 15px;" x-show="selectedSpan?.duration">
+                            <strong>Duration:</strong> <code x-text="selectedSpan?.duration + 'ms'"></code>
+                        </div>
+                        <div style="margin-bottom: 15px;" x-show="selectedSpan?.spanId">
+                            <strong>Span ID:</strong> <code x-text="selectedSpan?.spanId"></code>
+                        </div>
+                    </div>
+                    
+                    <div class="content-section" :class="{ active: activeTab === 'raw' }">
+                        <h5>Raw OTEL Events</h5>
+                        <pre x-text="formatJSON(selectedSpan?.raw_events || [])"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function agentView() {
+            return {
+                // State
+                awsConfigured: false,
+                awsAccessKey: '',
+                awsSecretKey: '',
+                awsSessionToken: '',
+                awsRegion: 'us-east-1',
+                agents: [],
+                sessions: [],
+                selectedAgent: '',
+                selectedSession: null,
+                selectedSpan: null,
+                activeTab: 'input',
+                timeRange: '24',
+                sessionFilter: '',
+                loading: false,
+                error: '',
+                
+                // Initialize
+                async init() {
+                    // Load credentials from localStorage
+                    this.loadStoredCredentials();
+                    await this.checkAwsConfig();
+                    if (this.awsConfigured) {
+                        await this.loadAgents();
+                    }
+                },
+                
+                // Load credentials from localStorage
+                loadStoredCredentials() {
+                    const stored = localStorage.getItem('awsCredentials');
+                    if (stored) {
+                        try {
+                            const creds = JSON.parse(stored);
+                            this.awsAccessKey = creds.accessKey || '';
+                            this.awsSecretKey = creds.secretKey || '';
+                            this.awsSessionToken = creds.sessionToken || '';
+                            this.awsRegion = creds.region || 'us-east-1';
+                        } catch (e) {
+                            console.error('Failed to load stored credentials');
+                        }
+                    }
+                },
+                
+                // Check AWS configuration
+                async checkAwsConfig() {
+                    try {
+                        const response = await fetch('/api/check-aws');
+                        const data = await response.json();
+                        this.awsConfigured = data.configured;
+                        if (data.region) this.awsRegion = data.region;
+                    } catch (e) {
+                        this.error = 'Failed to check AWS configuration';
+                    }
+                },
+                
+                // Save credentials
+                async saveCredentials() {
+                    try {
+                        const response = await fetch('/api/configure-aws', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                access_key: this.awsAccessKey,
+                                secret_key: this.awsSecretKey,
+                                session_token: this.awsSessionToken,
+                                region: this.awsRegion
+                            })
+                        });
+                        const data = await response.json();
+                        if (data.success) {
+                            this.awsConfigured = true;
+                            this.error = '';
+                            
+                            // Save to localStorage
+                            localStorage.setItem('awsCredentials', JSON.stringify({
+                                accessKey: this.awsAccessKey,
+                                secretKey: this.awsSecretKey,
+                                sessionToken: this.awsSessionToken,
+                                region: this.awsRegion
+                            }));
+                            
+                            await this.loadAgents();
+                        } else {
+                            this.error = data.error || 'Failed to configure AWS';
+                        }
+                    } catch (e) {
+                        this.error = 'Failed to save credentials';
+                    }
+                },
+                
+                // Load agents
+                async loadAgents() {
+                    this.loading = true;
+                    this.error = '';
+                    try {
+                        const response = await fetch('/api/agents');
+                        const data = await response.json();
+                        if (response.status === 401 && data.error === 'AWS_CREDENTIALS_EXPIRED') {
+                            this.error = '⚠️ AWS credentials expired. Please update your credentials below and click Save.';
+                            this.awsConfigured = false;
+                            return;
+                        }
+                        if (data.error) {
+                            this.error = data.error;
+                        } else {
+                            this.agents = data.agents;
+                            if (this.agents.length > 0 && !this.selectedAgent) {
+                                this.selectedAgent = this.agents[0];
+                                await this.loadSessions();
+                            }
+                        }
+                    } catch (e) {
+                        this.error = 'Failed to load agents: ' + e.message;
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                
+                // Load sessions
+                async loadSessions() {
+                    if (!this.selectedAgent) return;
+                    
+                    this.loading = true;
+                    this.error = '';
+                    try {
+                        const response = await fetch(`/api/sessions?agent=${encodeURIComponent(this.selectedAgent)}&hours=${this.timeRange}`);
+                        const data = await response.json();
+                        console.log(data)
+                        if (data.error) {
+                            this.error = data.error;
+                        } else {
+                            this.sessions = data.sessions; console.log(this.sessions)
+                        }
+                    } catch (e) {
+                        this.error = 'Failed to load sessions: ' + e.message;
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                
+                // Select session
+                async selectSession(session) {
+                    this.selectedSession = session;
+                    this.selectedSpan = null;
+                    this.activeTab = 'input';
+                    console.log('Selected session:', session);
+                    console.log('Traces:', session.traces);
+                },
+                
+                // Select span
+                selectSpan(span) {
+                    console.log('selectSpan called with:', span);
+                    console.log('Setting selectedSpan...');
+                    this.selectedSpan = span;
+                    this.activeTab = 'details';
+                    console.log('selectedSpan is now:', this.selectedSpan);
+                },
+                
+                // Format JSON
+                formatJSON(obj) {
+                    if (!obj) return 'No data';
+                    return JSON.stringify(obj, null, 2);
+                },
+                
+                // Format content arrays (for gen_ai messages)
+                formatContent(content) {
+                    if (!content) return 'No content';
+                    if (Array.isArray(content)) {
+                        return content.map(item => {
+                            if (item.text) return item.text;
+                            return JSON.stringify(item, null, 2);
+                        }).join('\\n\\n');
+                    }
+                    return JSON.stringify(content, null, 2);
+                },
+                
+                // Computed: filtered sessions
+                get filteredSessions() {
+                    if (!this.sessionFilter) return this.sessions;
+                    return this.sessions.filter(s => 
+                        s.sessionId.toLowerCase().includes(this.sessionFilter.toLowerCase())
+                    );
+                },
+                
+                // Format timestamp
+                formatTime(timestamp) {
+                    if (!timestamp) return '';
+                    return new Date(timestamp).toLocaleString();
+                }
+            }
+        }
+    </script>
+</body>
+</html>
