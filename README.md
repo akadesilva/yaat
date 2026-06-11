@@ -1,4 +1,4 @@
-# YAAT - Yet Another Agent Tracer
+# YAAT - Yet Another Agent Tracer (For learning purposes ONLY. This is NOT prod ready and NOT meant for customer environment.)
 
 **For Bedrock Agent Core Observability**
 
